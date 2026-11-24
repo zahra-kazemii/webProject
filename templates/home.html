@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% block title %}صفحه‌ی اصلی{% endblock %}
+
+{% block content %}
+
+{% if not user.is_authenticated %}
+  <div class="card p-5 text-center">
+    <h2 class="mb-3">به سامانه‌ی کتابخانه خوش آمدید</h2>
+    <p class="text-muted mb-4">کتاب‌ها را جستجو کنید، امانت بگیرید، تمدید کنید و کتاب‌های ناموجود را رزرو کنید.</p>
+    <div>
+      <a href="{% url 'login' %}" class="btn btn-primary me-2">ورود</a>
+      <a href="{% url 'register' %}" class="btn btn-outline-primary">ثبت‌نام</a>
+    </div>
+  </div>
+
+{% elif user.is_librarian %}
+  <h4 class="mb-3">پیشخوان کتابدار</h4>
+  <div class="row g-3">
+    <div class="col-6 col-lg-3">
+      <a href="{% url 'loan_manage_list' %}?status=PENDING" class="text-decoration-none">
+        <div class="card p-3 text-center">
+          <div class="fs-2 text-warning">{{ pending_count }}</div>
+          <div class="text-dark">درخواست امانت در انتظار</div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-lg-3">
+      <a href="{% url 'loan_manage_list' %}?status=RENEWAL" class="text-decoration-none">
+        <div class="card p-3 text-center">
+          <div class="fs-2 text-info">{{ renewal_count }}</div>
+          <div class="text-dark">درخواست تمدید</div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-lg-3">
+      <a href="{% url 'loan_manage_list' %}?status=OVERDUE" class="text-decoration-none">
+        <div class="card p-3 text-center">
+          <div class="fs-2 text-danger">{{ overdue_count }}</div>
+          <div class="text-dark">امانت دیرکرده</div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="card p-3 text-center">
+        <div class="fs-2 text-primary">{{ book_count }}</div>
+        <div>کتاب</div>
+        <a href="{% url 'member_list' %}" class="small">{{ member_count }} عضو</a>
+      </div>
+    </div>
+  </div>
+
+{% else %}
+  <h4 class="mb-3">سلام {{ user.get_full_name|default:user.username }} 👋</h4>
+
+  {% if unpaid_fines %}
+    <div class="alert alert-danger">
+      شما <strong>{{ unpaid_fines|floatformat:"0g" }} تومان</strong> جریمه‌ی پرداخت‌نشده دارید.
+      تا تسویه، امکان امانت جدید ندارید.
+    </div>
+  {% endif %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card p-3 text-center">
+        <div class="fs-2 text-primary">{{ active_count }}</div>
+        <div>امانت فعال</div>
+        <a href="{% url 'my_loans' %}" class="small">مشاهده‌ی امانت‌ها</a>
+      </div>
+    </div>
+    <div class="col-md-8">
+      <div class="card p-3 h-100">
+        <h6>سررسید نزدیک</h6>
+        {% for loan in due_soon %}
+          <div class="d-flex justify-content-between border-bottom py-2">
+            <span>{{ loan.book.title }}</span>
+            <span class="{% if loan.is_overdue %}text-danger fw-bold{% else %}text-warning{% endif %}">
+              {{ loan.due_date|date:"Y/m/d" }}{% if loan.is_overdue %} (دیرکرد){% endif %}
+            </span>
+          </div>
+        {% empty %}
+          <span class="text-muted">کتابی با سررسید نزدیک ندارید.</span>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <a href="{% url 'book_list' %}" class="btn btn-primary">جستجوی کتاب‌ها</a>
+{% endif %}
+
+{% endblock %}

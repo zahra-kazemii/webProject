@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% block title %}مدیریت امانت‌ها{% endblock %}
+
+{% block content %}
+<h4 class="mb-3">مدیریت امانت‌ها</h4>
+
+<form method="get" class="card p-3 mb-3">
+  <input type="hidden" name="status" value="{{ status }}">
+  <div class="input-group">
+    <input type="text" name="q" value="{{ q }}" class="form-control"
+           placeholder="جستجو: نام عضو یا عنوان کتاب...">
+    <button class="btn btn-primary" type="submit">جستجو</button>
+    {% if q %}<a href="?status={{ status }}" class="btn btn-outline-secondary">پاک کردن</a>{% endif %}
+  </div>
+</form>
+
+<ul class="nav nav-pills mb-3 flex-wrap">
+  <li class="nav-item">
+    <a class="nav-link {% if not status %}active{% endif %}" href="{% url 'loan_manage_list' %}">همه</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if status == 'PENDING' %}active{% endif %}" href="?status=PENDING">
+      در انتظار تایید <span class="badge bg-warning text-dark">{{ pending_count }}</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if status == 'RENEWAL' %}active{% endif %}" href="?status=RENEWAL">
+      درخواست تمدید <span class="badge bg-info text-dark">{{ renewal_pending_count }}</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if status == 'OVERDUE' %}active{% endif %}" href="?status=OVERDUE">
+      دیرکرده <span class="badge bg-danger">{{ overdue_count }}</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if status == 'ACTIVE' %}active{% endif %}" href="?status=ACTIVE">فعال</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if status == 'RETURNED' %}active{% endif %}" href="?status=RETURNED">بازگردانده شده</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if status == 'REJECTED' %}active{% endif %}" href="?status=REJECTED">رد شده</a>
+  </li>
+</ul>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>عضو</th>
+          <th>کتاب</th>
+          <th>تاریخ درخواست</th>
+          <th>سررسید / بازگشت</th>
+          <th>وضعیت</th>
+          <th>جریمه</th>
+          <th style="min-width: 220px;">عملیات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for loan in loans %}
+          <tr>
+            <td>{{ loan.user.get_full_name|default:loan.user.username }}</td>
+            <td><a href="{% url 'book_detail' loan.book.pk %}" class="text-decoration-none">{{ loan.book.title }}</a></td>
+            <td>{{ loan.request_date|date:"Y/m/d" }}</td>
+            <td>
+              {% if loan.return_date %}
+                بازگشت: {{ loan.return_date|date:"Y/m/d" }}
+              {% elif loan.due_date %}
+                <span class="{% if loan.is_overdue %}text-danger fw-bold{% endif %}">{{ loan.due_date|date:"Y/m/d" }}</span>
+                {% if loan.is_overdue %}<div class="small text-danger">{{ loan.late_days }} روز تأخیر</div>{% endif %}
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              {% include 'partials/loan_status.html' %}
+              {% if loan.renewal_requested %}
+                <div><span class="badge bg-info text-dark mt-1">درخواست تمدید</span></div>
+              {% endif %}
+              {% if loan.is_damaged %}
+                <div><span class="badge bg-dark mt-1" title="{{ loan.damage_notes }}">آسیب‌دیده</span></div>
+              {% endif %}
+            </td>
+            <td>
+              {% if loan.fine_amount %}
+                {{ loan.fine_amount|floatformat:"0g" }} تومان
+                {% if loan.is_fine_paid %}
+                  <span class="badge bg-success">پرداخت شده</span>
+                {% else %}
+                  <span class="badge bg-danger">پرداخت نشده</span>
+                {% endif %}
+              {% else %}—{% endif %}
+            </td>
+
+            <td>
+              {% if loan.status == 'PENDING' %}
+                <form method="post" action="{% url 'loan_approve' loan.pk %}" class="d-inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <button type="submit" class="btn btn-sm btn-success">تایید</button>
+                </form>
+                <form method="post" action="{% url 'loan_reject' loan.pk %}" class="d-flex gap-1 mt-1">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <input type="text" name="reason" class="form-control form-control-sm" placeholder="دلیل رد" required>
+                  <button type="submit" class="btn btn-sm btn-outline-danger text-nowrap">رد</button>
+                </form>
+
+              {% elif loan.status == 'ACTIVE' %}
+                <a href="{% url 'loan_return' loan.pk %}" class="btn btn-sm btn-primary">ثبت بازگشت</a>
+                {% if loan.renewal_requested %}
+                  <form method="post" action="{% url 'renew_approve' loan.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button type="submit" class="btn btn-sm btn-success">تایید تمدید</button>
+                  </form>
+                  <form method="post" action="{% url 'renew_reject' loan.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">رد تمدید</button>
+                  </form>
+                {% endif %}
+
+              {% elif loan.status == 'RETURNED' and loan.fine_amount and not loan.is_fine_paid %}
+                <form method="post" action="{% url 'fine_paid' loan.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <button type="submit" class="btn btn-sm btn-warning">ثبت پرداخت جریمه</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-4">موردی پیدا نشد.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

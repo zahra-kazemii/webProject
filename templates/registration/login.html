@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}ورود{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5 col-lg-4">
+    <div class="card p-4">
+      <h4 class="mb-4 text-center">ورود به سامانه</h4>
+
+      {% if form.errors %}
+        <div class="alert alert-danger">نام کاربری یا رمز عبور اشتباه است.</div>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+
+        <div class="mb-3">
+          <label class="form-label" for="id_username">نام کاربری</label>
+          <input type="text" name="username" id="id_username" class="form-control"
+                 value="{{ form.username.value|default:'' }}" required autofocus>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="id_password">رمز عبور</label>
+          <input type="password" name="password" id="id_password" class="form-control" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">ورود</button>
+      </form>
+
+      <p class="text-center mt-3 mb-0 small">
+        حساب ندارید؟ <a href="{% url 'register' %}">ثبت‌نام کنید</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}ثبت بازگشت کتاب{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card p-4">
+      <h4 class="mb-3">ثبت بازگشت کتاب</h4>
+
+      <div class="bg-light rounded p-3 mb-4">
+        <div><strong>کتاب:</strong> {{ loan.book.title }}</div>
+        <div><strong>عضو:</strong> {{ loan.user.get_full_name|default:loan.user.username }}</div>
+        <div><strong>سررسید:</strong> {{ loan.due_date|date:"Y/m/d" }}</div>
+        {% if loan.late_days %}
+          <div class="text-danger fw-bold mt-1">{{ loan.late_days }} روز تأخیر</div>
+        {% else %}
+          <div class="text-success mt-1">بدون تأخیر</div>
+        {% endif %}
+      </div>
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% include 'partials/form_fields.html' %}
+
+        <button type="submit" class="btn btn-primary">ثبت بازگشت</button>
+        <a href="{% url 'loan_manage_list' %}" class="btn btn-outline-secondary">انصراف</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

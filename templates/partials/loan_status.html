@@ -1,0 +1,13 @@
+{% if loan.status == 'PENDING' %}
+  <span class="badge bg-warning text-dark">در انتظار تایید</span>
+{% elif loan.status == 'ACTIVE' %}
+  {% if loan.is_overdue %}
+    <span class="badge bg-danger">دیرکرده</span>
+  {% else %}
+    <span class="badge bg-primary">فعال</span>
+  {% endif %}
+{% elif loan.status == 'RETURNED' %}
+  <span class="badge bg-success">بازگردانده شده</span>
+{% else %}
+  <span class="badge bg-secondary">رد شده</span>
+{% endif %}

@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}{{ book.title }}{% endblock %}
+
+{% block content %}
+<nav class="mb-3"><a href="{% url 'book_list' %}">← بازگشت به لیست کتاب‌ها</a></nav>
+
+<div class="card p-4">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+      <h3 class="mb-1">{{ book.title }}</h3>
+      <div class="text-muted">{{ book.author }}</div>
+    </div>
+    {% if book.stock > 0 %}
+      <span class="badge bg-success fs-6">موجود</span>
+    {% else %}
+      <span class="badge bg-danger fs-6">ناموجود</span>
+    {% endif %}
+  </div>
+
+  <hr>
+
+  <div class="row g-3">
+    <div class="col-md-6"><strong>ناشر:</strong> {{ book.publisher }}</div>
+    <div class="col-md-6"><strong>سال انتشار:</strong> {{ book.publish_year }}</div>
+    <div class="col-md-6"><strong>موضوع:</strong> {{ book.get_category_display }}</div>
+    <div class="col-md-6"><strong>موجودی:</strong> {{ book.stock }} از {{ book.total_copies }} نسخه</div>
+  </div>
+
+  <hr>
+
+  {% if user.is_librarian %}
+    <div>
+      <a href="{% url 'book_update' book.pk %}" class="btn btn-outline-secondary">ویرایش کتاب</a>
+      <a href="{% url 'book_delete' book.pk %}" class="btn btn-outline-danger">حذف کتاب</a>
+    </div>
+
+  {% else %}
+
+    {% if user_reservation and user_reservation.status == 'NOTIFIED' %}
+      <div class="alert alert-success">
+        کتابی که رزرو کرده بودید اکنون موجود است. هرچه زودتر درخواست امانت بدهید.
+      </div>
+    {% endif %}
+
+    {% if user_loan %}
+      {% if user_loan.status == 'PENDING' %}
+        <div class="alert alert-warning mb-0">درخواست امانت شما ثبت شده و منتظر تایید کتابدار است.</div>
+      {% else %}
+        <div class="alert alert-info mb-0">
+          این کتاب در امانت شماست. تاریخ سررسید: <strong>{{ user_loan.due_date|date:"Y/m/d" }}</strong>
+          — <a href="{% url 'my_loans' %}">مشاهده‌ی امانت‌های من</a>
+        </div>
+      {% endif %}
+
+    {% elif book.stock > 0 %}
+      <form method="post" action="{% url 'loan_request' book.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">درخواست امانت</button>
+      </form>
+
+    {% else %}
+      <div class="alert alert-secondary">همه‌ی نسخه‌های این کتاب در حال حاضر امانت داده شده‌اند.</div>
+      {% if user_reservation %}
+        <p>شما این کتاب را رزرو کرده‌اید و با موجود شدن به شما اطلاع می‌دهیم.</p>
+        <form method="post" action="{% url 'reservation_cancel' user_reservation.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'book_detail' book.pk %}">
+          <button type="submit" class="btn btn-outline-danger">لغو رزرو</button>
+        </form>
+      {% else %}
+        <form method="post" action="{% url 'reserve_book' book.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-warning">رزرو کتاب</button>
+        </form>
+      {% endif %}
+    {% endif %}
+
+  {% endif %}
+</div>
+{% endblock %}

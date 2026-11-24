@@ -4,6 +4,13 @@ class Book(models.Model):
     class Meta:
         verbose_name = 'کتاب'
         verbose_name_plural = 'کتاب ها'
+        ordering = ['title']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(stock__lte=models.F('total_copies')),
+                name='stock_lte_total_copies',
+            ),
+        ]
 
     CATEGORY_CHOICES = (
         ('fiction', 'رمان و داستان'),

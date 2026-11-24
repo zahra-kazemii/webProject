@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}امانت‌های من{% endblock %}
+
+{% block content %}
+<h4 class="mb-3">امانت‌های من</h4>
+
+{% if unpaid_fines %}
+  <div class="alert alert-danger">
+    مجموع جریمه‌ی پرداخت‌نشده‌ی شما: <strong>{{ unpaid_fines|floatformat:"0g" }} تومان</strong>.
+    برای تسویه به کتابدار مراجعه کنید؛ تا آن زمان امکان درخواست امانت جدید ندارید.
+  </div>
+{% endif %}
+
+<ul class="nav nav-pills mb-3">
+  <li class="nav-item">
+    <a class="nav-link {% if not status %}active{% endif %}" href="{% url 'my_loans' %}">همه</a>
+  </li>
+  {% for code, label in status_choices %}
+    <li class="nav-item">
+      <a class="nav-link {% if status == code %}active{% endif %}" href="?status={{ code }}">{{ label }}</a>
+    </li>
+  {% endfor %}
+</ul>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>کتاب</th>
+          <th>تاریخ درخواست</th>
+          <th>سررسید</th>
+          <th>وضعیت</th>
+          <th>تمدید</th>
+          <th>جریمه</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for loan in loans %}
+          <tr>
+            <td><a href="{% url 'book_detail' loan.book.pk %}" class="text-decoration-none fw-bold">{{ loan.book.title }}</a></td>
+            <td>{{ loan.request_date|date:"Y/m/d" }}</td>
+            <td>
+              {% if loan.due_date %}
+                <span class="{% if loan.is_overdue %}text-danger fw-bold{% endif %}">{{ loan.due_date|date:"Y/m/d" }}</span>
+                {% if loan.is_overdue %}<div class="small text-danger">{{ loan.late_days }} روز تأخیر</div>{% endif %}
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              {% include 'partials/loan_status.html' %}
+              {% if loan.status == 'REJECTED' and loan.rejection_reason %}
+                <div class="small text-muted mt-1">دلیل: {{ loan.rejection_reason }}</div>
+              {% endif %}
+            </td>
+            <td>{{ loan.renewal_count }} بار</td>
+            <td>
+              {% if loan.fine_amount %}
+                {{ loan.fine_amount|floatformat:"0g" }} تومان
+                {% if loan.is_fine_paid %}
+                  <span class="badge bg-success">پرداخت شده</span>
+                {% else %}
+                  <span class="badge bg-danger">پرداخت نشده</span>
+                {% endif %}
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              {% if loan.can_renew %}
+                <form method="post" action="{% url 'loan_renew_request' loan.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <button type="submit" class="btn btn-sm btn-outline-primary">درخواست تمدید</button>
+                </form>
+              {% elif loan.renewal_requested %}
+                <span class="badge bg-info text-dark">تمدید در انتظار بررسی</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-4">امانتی پیدا نشد.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
